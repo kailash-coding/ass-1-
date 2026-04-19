@@ -1,13 +1,250 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home - Portfolio</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tic Tac Toe</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 2rem;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+    }
+
+    h1 { font-size: 22px; font-weight: 500; }
+
+    .mode-btns { display: flex; gap: 8px; }
+
+    .mode-btn {
+      padding: 5px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background: transparent;
+      color: #888;
+    }
+
+    .mode-btn.active {
+      border-color: #534AB7;
+      color: #534AB7;
+      background: #EEEDFE;
+    }
+
+    .score { display: flex; gap: 24px; font-size: 13px; color: #888; }
+
+    .score-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+
+    .score-val { font-size: 22px; font-weight: 500; color: #222; }
+    .score-x { color: #534AB7; }
+    .score-o { color: #D85A30; }
+
+    #status { font-size: 15px; font-weight: 500; min-height: 22px; }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      gap: 8px;
+    }
+
+    .cell {
+      width: 100px; height: 100px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 42px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.12s;
+      user-select: none;
+    }
+
+    .cell:hover:not(.taken) { background: #f5f5f5; }
+    .cell.win { background: #e6f9ef; }
+    .cell.x { color: #534AB7; }
+    .cell.o { color: #D85A30; }
+
+    #reset-btn {
+      margin-top: 4px;
+      padding: 7px 28px;
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background: transparent;
+      color: #333;
+    }
+
+    #reset-btn:hover { background: #f5f5f5; }
+  </style>
 </head>
 <body>
-    <h1>kailassh</h1>
-    
+<div class="container">
+  <h1>Tic Tac Toe</h1>
+
+  <div class="mode-btns">
+    <button class="mode-btn active" onclick="setMode('2p')">2 Players</button>
+    <button class="mode-btn" onclick="setMode('ai')">vs Computer</button>
+  </div>
+
+  <div class="score">
+    <div class="score-item">
+      <span class="score-val score-x" id="sx">0</span>
+      <span>X</span>
+    </div>
+    <div class="score-item">
+      <span class="score-val" id="sd" style="color:#aaa">0</span>
+      <span>Draws</span>
+    </div>
+    <div class="score-item">
+      <span class="score-val score-o" id="so">0</span>
+      <span>O</span>
+    </div>
+  </div>
+
+  <div id="status">X's turn</div>
+  <div id="board"></div>
+  <button id="reset-btn" onclick="resetGame()">New Game</button>
+</div>
+
+<script>
+  let board = Array(9).fill(null);
+  let current = 'X';
+  let gameOver = false;
+  let mode = '2p';
+  let scores = { X: 0, O: 0, D: 0 };
+
+  const winPatterns = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  function setMode(m) {
+    mode = m;
+    document.querySelectorAll('.mode-btn').forEach((b, i) => {
+      b.classList.toggle('active', (i === 0 && m === '2p') || (i === 1 && m === 'ai'));
+    });
+    resetGame();
+  }
+
+  function checkWin(b, player) {
+    return winPatterns.find(w => w.every(i => b[i] === player)) || null;
+  }
+
+  function render() {
+    const boardEl = document.getElementById('board');
+    boardEl.innerHTML = '';
+    const winLine = checkWin(board, 'X') || checkWin(board, 'O');
+
+    board.forEach((val, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'cell'
+        + (val ? ' taken ' + val.toLowerCase() : '')
+        + (winLine && winLine.includes(i) ? ' win' : '');
+      cell.textContent = val || '';
+      cell.onclick = () => move(i);
+      boardEl.appendChild(cell);
+    });
+
+    document.getElementById('sx').textContent = scores.X;
+    document.getElementById('so').textContent = scores.O;
+    document.getElementById('sd').textContent = scores.D;
+  }
+
+  function setStatus(msg) {
+    document.getElementById('status').textContent = msg;
+  }
+
+  function move(i) {
+    if (gameOver || board[i]) return;
+
+    board[i] = current;
+    const win = checkWin(board, current);
+
+    if (win) {
+      render();
+      setStatus(`${current} wins!`);
+      scores[current]++;
+      gameOver = true;
+      render();
+      return;
+    }
+
+    if (board.every(Boolean)) {
+      render();
+      setStatus("It's a draw!");
+      scores.D++;
+      gameOver = true;
+      render();
+      return;
+    }
+
+    current = current === 'X' ? 'O' : 'X';
+    render();
+
+    if (mode === 'ai' && current === 'O' && !gameOver) {
+      setStatus("Computer is thinking…");
+      setTimeout(aiMove, 300);
+    } else {
+      setStatus(`${current}'s turn`);
+    }
+  }
+
+  function aiMove() {
+    const best = minimax(board, 'O');
+    move(best.idx);
+  }
+
+  function minimax(b, player) {
+    if (checkWin(b, 'O')) return { score: 10 };
+    if (checkWin(b, 'X')) return { score: -10 };
+
+    const empty = b.map((v, i) => v ? null : i).filter(v => v !== null);
+    if (!empty.length) return { score: 0 };
+
+    const results = empty.map(i => {
+      const nb = [...b];
+      nb[i] = player;
+      const result = minimax(nb, player === 'O' ? 'X' : 'O');
+      return { idx: i, score: result.score };
+    });
+
+    return results.reduce((best, curr) =>
+      player === 'O'
+        ? (curr.score > best.score ? curr : best)
+        : (curr.score < best.score ? curr : best)
+    );
+  }
+
+  function resetGame() {
+    board = Array(9).fill(null);
+    current = 'X';
+    gameOver = false;
+    setStatus("X's turn");
+    render();
+  }
+
+  resetGame();
+</script>
 </body>
 </html>
